@@ -1,6 +1,7 @@
 package chat.cli;
 
 import chat.service.MessageService;
+import chat.service.MessageWatcherService;
 import chat.service.PresenceService;
 
 import java.util.List;
@@ -11,6 +12,7 @@ public class CommandLoop {
     private final Scanner scanner;
     private final PresenceService presence;
     private final MessageService messageService;
+    private final MessageWatcherService watcher;
     private final String username;
 
     private boolean running = true;
@@ -19,17 +21,22 @@ public class CommandLoop {
             Scanner scanner,
             PresenceService presence,
             MessageService messageService,
+            MessageWatcherService watcher,
             String username
     ) {
         this.scanner = scanner;
         this.presence = presence;
         this.messageService = messageService;
+        this.watcher = watcher;
         this.username = username;
     }
 
     public void start() throws Exception {
 
         System.out.println("\nBem-vindo, " + username);
+
+        // 🔥 ativa watcher global
+        watcher.watchAll(username);
 
         while (running) {
 
@@ -62,22 +69,12 @@ public class CommandLoop {
 
         List<String> users = presence.listOnline();
 
-        if (users.isEmpty()) {
-            System.out.println("Ninguém online");
-            return;
-        }
-
         System.out.println(String.join(", ", users));
     }
 
     private void handleMsg(String input) throws Exception {
 
         String[] parts = input.split(" ", 3);
-
-        if (parts.length < 3) {
-            System.out.println("Uso: msg <usuario> <mensagem>");
-            return;
-        }
 
         String to = parts[1];
         String msg = parts[2];
@@ -87,14 +84,7 @@ public class CommandLoop {
 
     private void handleAbrir(String input) throws Exception {
 
-        String[] parts = input.split(" ");
-
-        if (parts.length < 2) {
-            System.out.println("Uso: abrir <usuario>");
-            return;
-        }
-
-        String to = parts[1];
+        String to = input.split(" ")[1];
 
         messageService.list(username, to);
     }

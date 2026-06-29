@@ -1,4 +1,6 @@
+chat/service/MessageWatcherService$1.class
 chat/Main.class
+chat/service/MessageWatcherService.class
 chat/ZKClient.class
 chat/service/MessageService.class
 chat/service/PresenceService.class
