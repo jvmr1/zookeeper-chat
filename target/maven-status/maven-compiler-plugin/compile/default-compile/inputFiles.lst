@@ -1,6 +1,8 @@
 /home/jvmr1/Desktop/mestrado/2026.1/Sistemas Distribuídos/projeto/zookeeper-chat/src/main/java/chat/service/MessageService.java
 /home/jvmr1/Desktop/mestrado/2026.1/Sistemas Distribuídos/projeto/zookeeper-chat/src/main/java/chat/Main.java
 /home/jvmr1/Desktop/mestrado/2026.1/Sistemas Distribuídos/projeto/zookeeper-chat/src/main/java/chat/service/MessageWatcherService.java
+/home/jvmr1/Desktop/mestrado/2026.1/Sistemas Distribuídos/projeto/zookeeper-chat/src/main/java/chat/service/GroupService.java
 /home/jvmr1/Desktop/mestrado/2026.1/Sistemas Distribuídos/projeto/zookeeper-chat/src/main/java/chat/cli/CommandLoop.java
+/home/jvmr1/Desktop/mestrado/2026.1/Sistemas Distribuídos/projeto/zookeeper-chat/src/main/java/chat/service/GroupWatcherService.java
 /home/jvmr1/Desktop/mestrado/2026.1/Sistemas Distribuídos/projeto/zookeeper-chat/src/main/java/chat/service/PresenceService.java
 /home/jvmr1/Desktop/mestrado/2026.1/Sistemas Distribuídos/projeto/zookeeper-chat/src/main/java/chat/ZKClient.java

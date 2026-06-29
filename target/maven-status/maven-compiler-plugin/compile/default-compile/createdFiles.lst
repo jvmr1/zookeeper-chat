@@ -1,4 +1,7 @@
+chat/service/GroupService.class
 chat/service/MessageWatcherService$1.class
+chat/service/GroupWatcherService.class
+chat/service/GroupWatcherService$1.class
 chat/Main.class
 chat/service/MessageWatcherService.class
 chat/ZKClient.class

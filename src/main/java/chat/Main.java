@@ -1,9 +1,7 @@
 package chat;
 
 import chat.cli.CommandLoop;
-import chat.service.MessageService;
-import chat.service.MessageWatcherService;
-import chat.service.PresenceService;
+import chat.service.*;
 import org.apache.zookeeper.ZooKeeper;
 
 import java.util.Scanner;
@@ -19,6 +17,8 @@ public class Main {
         PresenceService presence = new PresenceService(zk);
         MessageService messageService = new MessageService(zk);
         MessageWatcherService watcher = new MessageWatcherService(zk);
+        GroupService groupService = new GroupService(zk);
+        GroupWatcherService groupWatcher = new GroupWatcherService(zk);
 
         Scanner scanner = new Scanner(System.in);
 
@@ -28,7 +28,7 @@ public class Main {
         presence.login(username);
 
         CommandLoop cli =
-                new CommandLoop(scanner, presence, messageService, watcher, username);
+                new CommandLoop(scanner, presence, messageService, watcher, groupService, groupWatcher, username);
 
         cli.start();
     }
