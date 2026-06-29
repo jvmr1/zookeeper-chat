@@ -1,0 +1,4 @@
+chat/Main.class
+chat/ZKClient.class
+chat/service/MessageService.class
+chat/service/PresenceService.class
