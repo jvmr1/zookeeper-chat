@@ -14,15 +14,12 @@ public class MessageWatcherService {
         this.zk = zk;
     }
 
-    private String convId(String a, String b) {
-        return a.compareTo(b) < 0 ? a + "_" + b : b + "_" + a;
-    }
-
     public void watchAll(String self) throws Exception {
 
         String root = "/chat/conversations";
 
-        if (zk.exists(root, false) == null) return;
+        if (zk.exists(root, false) == null)
+            return;
 
         List<String> convs = zk.getChildren(root, false);
 
@@ -30,11 +27,11 @@ public class MessageWatcherService {
 
             String[] parts = conv.split("_");
 
-            // ✅ CORREÇÃO: só participa se for membro real
-            boolean isParticipant =
-                    parts[0].equals(self) || parts[1].equals(self);
+            // só participa se for membro real
+            boolean isParticipant = parts[0].equals(self) || parts[1].equals(self);
 
-            if (!isParticipant) continue;
+            if (!isParticipant)
+                continue;
 
             String path = root + "/" + conv + "/messages";
 
@@ -47,8 +44,7 @@ public class MessageWatcherService {
 
                         try {
 
-                            List<String> msgs =
-                                    zk.getChildren(path, false);
+                            List<String> msgs = zk.getChildren(path, false);
 
                             msgs.sort(String::compareTo);
 
@@ -56,8 +52,7 @@ public class MessageWatcherService {
 
                                 String last = msgs.get(msgs.size() - 1);
 
-                                byte[] data =
-                                        zk.getData(path + "/" + last, false, null);
+                                byte[] data = zk.getData(path + "/" + last, false, null);
 
                                 String raw = new String(data);
                                 String[] p = raw.split(":", 2);
@@ -65,16 +60,15 @@ public class MessageWatcherService {
                                 String from = p[0];
                                 String msg = p.length > 1 ? p[1] : raw;
 
-                                // ❌ não notifica remetente
+                                // não notifica remetente
                                 if (!from.equals(self)) {
                                     System.out.println(
-                                            "\n[NOVA MENSAGEM] de " + from + ": " + msg
-                                    );
+                                            "\n[NOVA MENSAGEM] de " + from + ": " + msg);
                                     System.out.print("\n> ");
                                 }
                             }
 
-                            // 🔁 re-registra watcher
+                            // re-registra watcher
                             watchAll(self);
 
                         } catch (Exception e) {

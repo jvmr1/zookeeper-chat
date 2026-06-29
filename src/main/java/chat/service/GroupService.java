@@ -1,10 +1,11 @@
 package chat.service;
 
+import java.util.List;
+import java.util.ArrayList;
+
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
-
-import java.util.List;
 
 public class GroupService {
 
@@ -86,7 +87,7 @@ public class GroupService {
 
     public List<String> listMyGroups(String user) throws Exception {
         List<String> allGroups = listGroups();
-        List<String> myGroups = new java.util.ArrayList<>();
+        List<String> myGroups = new ArrayList<>();
         for (String g : allGroups) {
             try {
                 List<String> members = listMembers(g);
@@ -94,12 +95,28 @@ public class GroupService {
                     myGroups.add(g);
                 }
             } catch (Exception e) {
-                // Ignore if group or members node got deleted in the meantime
+                // grupo ou membros deletados concorrentemente — ignorar
             }
         }
         return myGroups;
     }
 
+    public void listMessages(String group) throws Exception {
+
+        String path = groupPath(group) + "/messages";
+
+        List<String> msgs = zk.getChildren(path, false);
+        msgs.sort(String::compareTo);
+
+        for (String m : msgs) {
+            byte[] data = zk.getData(path + "/" + m, false, null);
+            String raw = new String(data);
+            String[] parts = raw.split(":", 2);
+            String sender = parts[0];
+            String msg = parts.length > 1 ? parts[1] : raw;
+            System.out.println(m + " [" + sender + "] -> " + msg);
+        }
+    }
 
     public void sendMessage(String group, String from, String message) throws Exception {
 
@@ -109,8 +126,7 @@ public class GroupService {
                 path,
                 (from + ":" + message).getBytes(),
                 ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                CreateMode.PERSISTENT_SEQUENTIAL
-        );
+                CreateMode.PERSISTENT_SEQUENTIAL);
 
         System.out.println("Mensagem enviada no grupo " + group);
     }
@@ -131,10 +147,9 @@ public class GroupService {
                             currentPath,
                             new byte[0],
                             ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                            CreateMode.PERSISTENT
-                    );
+                            CreateMode.PERSISTENT);
                 } catch (org.apache.zookeeper.KeeperException.NodeExistsException e) {
-                    // Ignore, already created
+                    // já existe, criado concorrentemente — ok
                 }
             }
         }

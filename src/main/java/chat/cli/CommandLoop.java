@@ -24,8 +24,7 @@ public class CommandLoop {
             MessageWatcherService watcher,
             GroupService groupService,
             GroupWatcherService groupWatcher,
-            String username
-    ) {
+            String username) {
         this.scanner = scanner;
         this.presence = presence;
         this.messageService = messageService;
@@ -39,10 +38,10 @@ public class CommandLoop {
 
         System.out.println("\nBem-vindo, " + username);
 
-        // 🔥 ativa watcher global
+        // ativa watcher global
         watcher.watchAll(username);
 
-        // 🔥 ativa watcher global de grupos
+        // ativa watcher global de grupos
         groupWatcher.watchAllGroups(username);
 
         while (running) {
@@ -51,19 +50,28 @@ public class CommandLoop {
             String input = scanner.nextLine().trim();
 
             if (input.equals("online")) {
-                handleOnline();
+                List<String> users = presence.listOnline();
+                System.out.println(String.join(", ", users));
             }
 
             else if (input.startsWith("msg ")) {
-                handleMsg(input);
+                String[] parts = input.split(" ", 3);
+
+                String to = parts[1];
+                String msg = parts[2];
+
+                messageService.send(username, to, msg);
             }
 
             else if (input.startsWith("abrir ")) {
-                handleAbrir(input);
+                String to = input.split(" ")[1];
+
+                messageService.list(username, to);
             }
 
             else if (input.equals("logout")) {
-                handleLogout();
+                presence.logout(username);
+                running = false;
             }
 
             else if (input.equals("grupo listar")) {
@@ -96,7 +104,7 @@ public class CommandLoop {
 
                 String[] p = input.split(" ");
                 String targetGroup = p[2];
-                String targetUser  = p[3];
+                String targetUser = p[3];
 
                 groupService.addMember(targetGroup, targetUser);
 
@@ -120,6 +128,13 @@ public class CommandLoop {
                 groupService.leaveGroup(group, username);
             }
 
+            else if (input.startsWith("grupo abrir ")) {
+
+                String group = input.split(" ")[2];
+
+                groupService.listMessages(group);
+            }
+
             else if (input.startsWith("grupo membros ")) {
 
                 String group = input.split(" ")[2];
@@ -133,33 +148,4 @@ public class CommandLoop {
         }
     }
 
-    private void handleOnline() throws Exception {
-
-        List<String> users = presence.listOnline();
-
-        System.out.println(String.join(", ", users));
-    }
-
-    private void handleMsg(String input) throws Exception {
-
-        String[] parts = input.split(" ", 3);
-
-        String to = parts[1];
-        String msg = parts[2];
-
-        messageService.send(username, to, msg);
-    }
-
-    private void handleAbrir(String input) throws Exception {
-
-        String to = input.split(" ")[1];
-
-        messageService.list(username, to);
-    }
-
-    private void handleLogout() throws Exception {
-
-        presence.logout(username);
-        running = false;
-    }
 }

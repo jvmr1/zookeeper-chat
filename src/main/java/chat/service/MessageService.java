@@ -36,8 +36,7 @@ public class MessageService {
                 msgPath,
                 (from + ":" + message).getBytes(),
                 ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                CreateMode.PERSISTENT_SEQUENTIAL
-        );
+                CreateMode.PERSISTENT_SEQUENTIAL);
     }
 
     public void list(String from, String to) throws Exception {
@@ -47,7 +46,7 @@ public class MessageService {
 
         List<String> msgs = zk.getChildren(root, false);
 
-        // ✅ CORREÇÃO: garante ordem correta
+        // garante ordem correta
         msgs.sort(String::compareTo);
 
         for (String m : msgs) {
@@ -75,12 +74,15 @@ public class MessageService {
             current += "/" + parts[i];
 
             if (zk.exists(current, false) == null) {
-                zk.create(
-                        current,
-                        new byte[0],
-                        ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                        CreateMode.PERSISTENT
-                );
+                try {
+                    zk.create(
+                            current,
+                            new byte[0],
+                            ZooDefs.Ids.OPEN_ACL_UNSAFE,
+                            CreateMode.PERSISTENT);
+                } catch (org.apache.zookeeper.KeeperException.NodeExistsException e) {
+                    // Ignore, already created
+                }
             }
         }
     }

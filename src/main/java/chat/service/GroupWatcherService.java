@@ -18,14 +18,19 @@ public class GroupWatcherService {
 
         String root = "/chat/groups";
 
-        if (zk.exists(root, false) == null) return;
+        if (zk.exists(root, false) == null)
+            return;
 
         // Watcher no root: detecta criação de novos grupos enquanto online
         List<String> groups = zk.getChildren(root, new Watcher() {
             @Override
             public void process(WatchedEvent event) {
                 if (event.getType() == Event.EventType.NodeChildrenChanged) {
-                    try { watchAllGroups(self); } catch (Exception e) { e.printStackTrace(); }
+                    try {
+                        watchAllGroups(self);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         });
@@ -34,9 +39,11 @@ public class GroupWatcherService {
 
             String membersPath = root + "/" + group + "/members";
 
-            if (zk.exists(membersPath, false) == null) continue;
+            if (zk.exists(membersPath, false) == null)
+                continue;
 
-            // Watcher nos membros: detecta quando o usuário é adicionado a um grupo existente
+            // Watcher nos membros: detecta quando o usuário é adicionado a um grupo
+            // existente
             zk.getChildren(membersPath, new Watcher() {
                 @Override
                 public void process(WatchedEvent event) {
@@ -46,7 +53,9 @@ public class GroupWatcherService {
                             if (zk.exists(root + "/" + group + "/members/" + self, false) != null) {
                                 watch(group, self);
                             }
-                        } catch (Exception e) { e.printStackTrace(); }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
             });
@@ -62,7 +71,8 @@ public class GroupWatcherService {
 
         String path = "/chat/groups/" + group + "/messages";
 
-        if (zk.exists(path, false) == null) return;
+        if (zk.exists(path, false) == null)
+            return;
 
         zk.getChildren(path, new Watcher() {
 
@@ -76,24 +86,23 @@ public class GroupWatcherService {
                         List<String> msgs = zk.getChildren(path, false);
                         msgs.sort(String::compareTo);
 
-                            String last = msgs.get(msgs.size() - 1);
+                        String last = msgs.get(msgs.size() - 1);
 
-                            byte[] data = zk.getData(path + "/" + last, false, null);
+                        byte[] data = zk.getData(path + "/" + last, false, null);
 
-                            String raw = new String(data);
-                            String[] p = raw.split(":", 2);
+                        String raw = new String(data);
+                        String[] p = raw.split(":", 2);
 
-                            String from = p[0];
+                        String from = p[0];
                         String msg = p[1];
 
-                            if (!from.equals(self)) {
+                        if (!from.equals(self)) {
 
-                                System.out.println(
-                                        "\n[GRUPO " + group + "] " + from + ": " + msg
-                                );
+                            System.out.println(
+                                    "\n[GRUPO " + group + "] " + from + ": " + msg);
 
-                                System.out.print("\n> ");
-                            }
+                            System.out.print("\n> ");
+                        }
 
                         watch(group, self); // re-register
 
