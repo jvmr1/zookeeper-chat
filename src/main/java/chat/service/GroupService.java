@@ -19,13 +19,52 @@ public class GroupService {
         return "/chat/groups/" + group;
     }
 
-    public void createGroup(String group, String owner) throws Exception {
+    public static class GroupMeta {
+        public String owner;
+        public boolean isPublic;
+    }
+
+    public GroupMeta getMetadata(String group) {
+        try {
+            byte[] data = zk.getData(groupPath(group), false, null);
+            GroupMeta meta = new GroupMeta();
+            if (data == null || data.length == 0) {
+                // Compatibilidade com grupos antigos: padrão é público e dono desconhecido
+                meta.owner = "desconhecido";
+                meta.isPublic = true;
+                return meta;
+            }
+            String s = new String(data);
+            for (String part : s.split(";")) {
+                String[] kv = part.split(":", 2);
+                if (kv.length == 2) {
+                    if (kv[0].equals("owner"))
+                        meta.owner = kv[1];
+                    if (kv[0].equals("type"))
+                        meta.isPublic = kv[1].equals("public");
+                }
+            }
+            if (meta.owner == null) {
+                meta.owner = "desconhecido";
+            }
+            return meta;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public void createGroup(String group, String owner, boolean isPublic) throws Exception {
 
         String root = groupPath(group);
 
         ensure(root);
         ensure(root + "/members");
         ensure(root + "/messages");
+        ensure(root + "/requests");
+
+        // Salva os metadados no nó do grupo
+        String metaData = "owner:" + owner + ";type:" + (isPublic ? "public" : "private");
+        zk.setData(root, metaData.getBytes(), -1);
 
         try {
             zk.create(
@@ -38,7 +77,7 @@ public class GroupService {
             // dono já é membro (grupo pré-existente) — ok
         }
 
-        System.out.println("Grupo criado: " + group);
+        System.out.println("Grupo " + (isPublic ? "público" : "privado") + " criado: " + group);
     }
 
     public void addMember(String group, String user) throws Exception {
@@ -72,6 +111,65 @@ public class GroupService {
         }
     }
 
+    public void requestJoin(String group, String user) throws Exception {
+        GroupMeta meta = getMetadata(group);
+        if (meta == null) {
+            System.out.println("Grupo não existe.");
+            return;
+        }
+        if (!meta.isPublic) {
+            System.out.println("Não é possível solicitar entrada em um grupo privado.");
+            return;
+        }
+        if (zk.exists(groupPath(group) + "/members/" + user, false) != null) {
+            System.out.println("Você já é membro deste grupo.");
+            return;
+        }
+        String path = groupPath(group) + "/requests/" + user;
+        try {
+            zk.create(
+                    path,
+                    new byte[0],
+                    ZooDefs.Ids.OPEN_ACL_UNSAFE,
+                    CreateMode.PERSISTENT);
+            System.out.println("Solicitação enviada para entrar no grupo " + group);
+        } catch (org.apache.zookeeper.KeeperException.NodeExistsException e) {
+            System.out.println("Você já possui uma solicitação pendente para este grupo.");
+        }
+    }
+
+    public void approveRequest(String group, String admin, String user) throws Exception {
+        GroupMeta meta = getMetadata(group);
+        if (meta == null || !admin.equals(meta.owner)) {
+            System.out.println(
+                    "Apenas o administrador do grupo (" + (meta != null ? meta.owner : "nenhum") + ") pode aprovar.");
+            return;
+        }
+        String reqPath = groupPath(group) + "/requests/" + user;
+        if (zk.exists(reqPath, false) == null) {
+            System.out.println("Nenhuma solicitação pendente encontrada para o usuário " + user);
+            return;
+        }
+        addMember(group, user);
+        zk.delete(reqPath, -1);
+        System.out.println("Solicitação de " + user + " aprovada.");
+    }
+
+    public void rejectRequest(String group, String admin, String user) throws Exception {
+        GroupMeta meta = getMetadata(group);
+        if (meta == null || !admin.equals(meta.owner)) {
+            System.out.println("Apenas o administrador do grupo pode reprovar.");
+            return;
+        }
+        String reqPath = groupPath(group) + "/requests/" + user;
+        if (zk.exists(reqPath, false) == null) {
+            System.out.println("Nenhuma solicitação pendente encontrada para o usuário " + user);
+            return;
+        }
+        zk.delete(reqPath, -1);
+        System.out.println("Solicitação de " + user + " rejeitada.");
+    }
+
     public List<String> listMembers(String group) throws Exception {
 
         String path = groupPath(group) + "/members";
@@ -79,14 +177,25 @@ public class GroupService {
         return zk.getChildren(path, false);
     }
 
-    public List<String> listGroups() throws Exception {
+    public List<String> listGroups(String user) throws Exception {
         String path = "/chat/groups";
         ensure(path);
-        return zk.getChildren(path, false);
+        List<String> all = zk.getChildren(path, false);
+        List<String> visible = new ArrayList<>();
+        for (String g : all) {
+            GroupMeta meta = getMetadata(g);
+            if (meta == null)
+                continue;
+            // Público: qualquer um vê. Privado: só quem é membro vê.
+            if (meta.isPublic || zk.exists(groupPath(g) + "/members/" + user, false) != null) {
+                visible.add(g);
+            }
+        }
+        return visible;
     }
 
     public List<String> listMyGroups(String user) throws Exception {
-        List<String> allGroups = listGroups();
+        List<String> allGroups = listGroups(user);
         List<String> myGroups = new ArrayList<>();
         for (String g : allGroups) {
             try {

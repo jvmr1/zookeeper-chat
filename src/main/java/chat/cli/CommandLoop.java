@@ -75,11 +75,11 @@ public class CommandLoop {
             }
 
             else if (input.equals("grupo listar")) {
-                List<String> groups = groupService.listGroups();
+                List<String> groups = groupService.listGroups(username);
                 if (groups.isEmpty()) {
-                    System.out.println("Nenhum grupo cadastrado.");
+                    System.out.println("Nenhum grupo visível cadastrado.");
                 } else {
-                    System.out.println("Grupos no sistema: " + String.join(", ", groups));
+                    System.out.println("Grupos visíveis: " + String.join(", ", groups));
                 }
             }
 
@@ -94,10 +94,54 @@ public class CommandLoop {
 
             else if (input.startsWith("grupo criar ")) {
 
-                String group = input.split(" ")[2];
+                String[] p = input.split(" ");
+                if (p.length < 4) {
+                    System.out.println("Uso: grupo criar <nome> <public|private>");
+                    continue;
+                }
+                String group = p[2];
+                String type = p[3];
+                boolean isPublic = type.equalsIgnoreCase("public");
 
-                groupService.createGroup(group, username);
+                groupService.createGroup(group, username, isPublic);
                 groupWatcher.watch(group, username); // observa o grupo recém-criado
+                
+                // Dono de grupo público observa solicitações
+                if (isPublic) {
+                    groupWatcher.watchRequests(group, username);
+                }
+            }
+
+            else if (input.startsWith("grupo solicitar ")) {
+                String[] p = input.split(" ");
+                if (p.length < 3) {
+                    System.out.println("Uso: grupo solicitar <nome>");
+                    continue;
+                }
+                String group = p[2];
+                groupService.requestJoin(group, username);
+            }
+
+            else if (input.startsWith("grupo aprovar ")) {
+                String[] p = input.split(" ");
+                if (p.length < 4) {
+                    System.out.println("Uso: grupo aprovar <grupo> <usuario>");
+                    continue;
+                }
+                String group = p[2];
+                String user = p[3];
+                groupService.approveRequest(group, username, user);
+            }
+
+            else if (input.startsWith("grupo reprovar ")) {
+                String[] p = input.split(" ");
+                if (p.length < 4) {
+                    System.out.println("Uso: grupo reprovar <grupo> <usuario>");
+                    continue;
+                }
+                String group = p[2];
+                String user = p[3];
+                groupService.rejectRequest(group, username, user);
             }
 
             else if (input.startsWith("grupo add ")) {

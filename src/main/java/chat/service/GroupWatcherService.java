@@ -14,6 +14,47 @@ public class GroupWatcherService {
         this.zk = zk;
     }
 
+    private boolean isOwner(String groupPath, String self) {
+        try {
+            byte[] data = zk.getData(groupPath, false, null);
+            if (data == null || data.length == 0) return false;
+            String s = new String(data);
+            for (String part : s.split(";")) {
+                String[] kv = part.split(":", 2);
+                if (kv.length == 2 && kv[0].equals("owner") && kv[1].equals(self)) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            // ignorar falhas de leitura
+        }
+        return false;
+    }
+
+    public void watchRequests(String group, String self) throws Exception {
+        String path = "/chat/groups/" + group + "/requests";
+        if (zk.exists(path, false) == null) return;
+
+        zk.getChildren(path, new Watcher() {
+            @Override
+            public void process(WatchedEvent event) {
+                if (event.getType() == Event.EventType.NodeChildrenChanged) {
+                    try {
+                        List<String> reqs = zk.getChildren(path, false);
+                        if (!reqs.isEmpty()) {
+                            System.out.println("\n[SOLICITAÇÃO] Usuários aguardando no grupo " + group + ": " + String.join(", ", reqs));
+                            System.out.println("Use 'grupo aprovar " + group + " <usuario>' ou 'grupo reprovar " + group + " <usuario>' para responder.");
+                            System.out.print("\n> ");
+                        }
+                        watchRequests(group, self); // re-register
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+    }
+
     public void watchAllGroups(String self) throws Exception {
 
         String root = "/chat/groups";
@@ -37,7 +78,14 @@ public class GroupWatcherService {
 
         for (String group : groups) {
 
-            String membersPath = root + "/" + group + "/members";
+            String groupFullPath = root + "/" + group;
+
+            // Se for dono do grupo, observa a fila de solicitações (requests)
+            if (isOwner(groupFullPath, self)) {
+                watchRequests(group, self);
+            }
+
+            String membersPath = groupFullPath + "/members";
 
             if (zk.exists(membersPath, false) == null)
                 continue;
